@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 # set -x
 #
 # duply_qr.sh
@@ -23,9 +23,9 @@
 #  - qrencode
 #  - enscript
 #  - ImageMagick (montage)
-#  - zbar (zbarimg)
+#  - zbar (zbarimg, zbar-tools package on Debian)
 #  - ghostscript (ps2pdf)
-#  - xpdf (pdftopng)
+#  - xpdf (pdftoppm, poppler-utils package on Debian)
 #  - evince
 #
 # Limitations:
@@ -102,7 +102,7 @@ then
   exit 1
 fi
 
-for executable in duply qrencode enscript montage zbarimg ps2pdf pdftopng
+for executable in duply qrencode enscript montage zbarimg ps2pdf pdftoppm
 do
   which "${executable}" >/dev/null 2>&1
   if [ $? -ne 0 ]
@@ -234,7 +234,7 @@ enscript -e -p ${output_basename}.ps -f Courier8 ${output_basename}.txt
 
 echo "** Converting postscript to PDF **"
 ps2pdf ${output_basename}.ps ${output_basename}.pdf
-pdftopng  ${output_basename}.pdf ${pdf_separated}/page
+pdftoppm  ${output_basename}.pdf ${pdf_separated}/page
 montage ${pdf_separated}/page* -geometry +0 ${merged_qr_code}
 
 echo "** Reading QR code back and comparing checksum **"
