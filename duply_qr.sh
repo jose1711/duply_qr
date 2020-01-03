@@ -41,9 +41,10 @@ umask 077
 
 function usage {
   cat <<HERE
-Usage: $1 [-C] [-c columns] [-h] [-p] [-v symbol_version] duply_profile_name
+Usage: $1 [-C] [-V] [-c columns] [-h] [-p] [-v symbol_version] duply_profile_name
 
  -C                disable tar compression, compression (xz) is enabled by default
+ -V                do *not* invoke a viewer (evince) program after conversion
  -c columns        number of columns (1, 2 or 3), default: 2
  -h                this help
  -p                also include public keys in the output (disabled by default)
@@ -58,16 +59,19 @@ Directory \`my_important_data\` must exist inside ~/.duply.
 HERE
 }
 
+
 # defaults
 columns=2
 publickey_export=0
 compress=1
 qr_version=20
+viewer=1
 
-while getopts ":c:hCv:" options
+while getopts ":c:hCVv:" options
 do
   case "${options}" in
     C) compress=0 ;;
+    V) viewer=0 ;;
     c) columns=${OPTARG} ;;
     h) usage "$0"; exit 0;;
     p) publickey_export=1 ;;
@@ -123,6 +127,14 @@ fi
 qr_codes_dir=$(mktemp -d --tmpdir=${profileDir})
 pdf_separated=$(mktemp -d --tmpdir=${profileDir} pdf-separatedXXX)
 merged_qr_code=$(mktemp --suffix=.jpg --tmpdir=${profileDir})
+
+function cleanup {
+  echo "** Cleaning up **"
+  rm -r "${qr_codes_dir}" "${pdf_separated}" "${merged_qr_code}" "${tarfile}" "${output_basename}.txt" "${output_basename}.ps" "${profileDir}"/conf_mini 2>/dev/null
+}
+
+# cleanup on exit
+trap cleanup EXIT
 
 echo "** Removing exported keys to force their recreation **"
 rm "${profileDir}"/gpgkey.*.pub.asc 2>/dev/null
@@ -232,17 +244,20 @@ then
   echo "OK - md5 sum matches the original"
 else
   echo "Failed! Decoded data does not match the original."
+  failed_qr_code=$(mktemp --suffix=.jpg --tmpdir=${profileDir})
+  mv "${merged_qr_code}" ${failed_qr_code}
+  echo "Check the failed output in ${failed_qr_code}."
   exit 1
 fi
 
-echo "** Showing the output **"
-echo "Now is the time to send this file to a printer. Do note"
-echo "that heavy-duty printers use internal harddrives as cache"
-echo "so better avoid those if you care about security."
-evince ${output_basename}.pdf
-
-echo "** Cleaning up **"
-rm -r "${qr_codes_dir}" "${pdf_separated}" "${merged_qr_code}" "${tarfile}" "${output_basename}.txt" "${output_basename}.ps" conf_mini
+if [ "${viewer}" -ne 0 ]
+then
+  echo "** Showing the output **"
+  echo "Now is the time to send this file to a printer. Do note"
+  echo "that heavy-duty printers use internal harddrives as cache"
+  echo "so better avoid those if you care about security."
+  evince ${output_basename}.pdf
+fi
 
 echo "** Output is in ${output_basename}.pdf **"
-echo "Don't forget to delee it once you're done with the printing"
+echo "Don't forget to delete it once you're done with the printing"
