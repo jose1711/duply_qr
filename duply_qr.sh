@@ -160,13 +160,13 @@ if [ "${publickey_export}" -eq 1 ]
 then
   (
   cd
-  find .duply/${profile} -maxdepth 1 \( -name conf_mini -o -name 'gpgkey.*.pub.asc' -o -name 'gpgkey.*.sec.asc' \) -print0 | \
+  find .duply/${profile} -maxdepth 1 \( -name conf_mini -o -name 'gpgkey.*.pub.asc' -o -name 'gpgkey.*.sec.asc' -o -name '*.json' \) -print0 | \
     $TAR "${tarfile}"
   )
 else
   (
   cd
-  find .duply/${profile} -maxdepth 1 \( -name conf_mini -o -name 'gpgkey.*.sec.asc' \) -print0 | \
+  find .duply/${profile} -maxdepth 1 \( -name conf_mini -o -name 'gpgkey.*.sec.asc' -o -name '*.json' \) -print0 | \
     $TAR "${tarfile}"
 )
 fi
