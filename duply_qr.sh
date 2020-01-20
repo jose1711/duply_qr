@@ -27,6 +27,7 @@
 #  - ghostscript (ps2pdf)
 #  - xpdf (pdftoppm, poppler-utils package on Debian)
 #  - evince
+#  - wipe
 #
 # Limitations:
 #  - Structured QR codes have a size limit and if you're using
@@ -102,7 +103,7 @@ then
   exit 1
 fi
 
-for executable in duply qrencode enscript montage zbarimg ps2pdf pdftoppm
+for executable in duply qrencode enscript montage zbarimg ps2pdf pdftoppm wipe
 do
   which "${executable}" >/dev/null 2>&1
   if [ $? -ne 0 ]
@@ -130,7 +131,8 @@ merged_qr_code=$(mktemp --suffix=.jpg --tmpdir=${profileDir})
 
 function cleanup {
   echo "** Cleaning up **"
-  rm -r "${qr_codes_dir}" "${pdf_separated}" "${merged_qr_code}" "${tarfile}" "${output_basename}.txt" "${output_basename}.ps" "${profileDir}"/conf_mini 2>/dev/null
+  wipe -r "${qr_codes_dir}"
+  wipe  "${pdf_separated}" "${merged_qr_code}" "${tarfile}" "${output_basename}.txt" "${output_basename}.ps" "${profileDir}"/conf_mini 2>/dev/null
 }
 
 # cleanup on exit
@@ -218,19 +220,33 @@ else
   tarflag=""
 fi
 
-cat >> ${profile}-duply-profile.txt <<HERE
+function validate_text() {
+cat <<HERE
+To validate quality (do this once in a while):
+ * scan all printed pages into separate PNG files
+ * montage scanned_page*.png -geometry +0 qr_code.png
+ * zbarimg -vvv qr_code.png 2>&1 | grep ^qr_code_decode
+   observe number of errors corrected by ECC
+ * decide whether a fresh printout needs to be done
+HERE
+}
+
+function decode_text() {
+cat <<HERE
 To decode:
- * scan all pages into separate PNG files
+ * scan all printed pages into separate PNG files
  * montage scanned_page*.png -geometry +0 qr_code.png
  * zbarimg --raw qr_code.png | base64 -d | tar -C destination -xv${tarflag}kf -
    (destination will probably be ~/.duply)
- * rename conf_mini to conf and proceed with restoration (consult duply
-   documentation)
+ * rename conf_mini to conf and proceed with restoration (check duply documentation)
 
  Make sure to do this test at least *once* with a real printout!
 HERE
+}
 
-enscript -e -p ${output_basename}.ps -f Courier8 ${output_basename}.txt
+paste <((validate_text)) <((decode_text)) | expand -t30 >> "${profile}-duply-profile.txt"
+
+enscript -e -p ${output_basename}.ps -f Courier6 ${output_basename}.txt
 
 echo "** Converting postscript to PDF **"
 ps2pdf ${output_basename}.ps ${output_basename}.pdf
@@ -260,4 +276,4 @@ then
 fi
 
 echo "** Output is in ${output_basename}.pdf **"
-echo "Don't forget to delete it once you're done with the printing"
+echo "Don't forget to delete it once you're done with the printing (man wipe)."
